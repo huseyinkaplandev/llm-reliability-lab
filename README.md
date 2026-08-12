@@ -1,7 +1,7 @@
 # LLM Reliability Lab
 
-**[Run the suite live →](https://llm-reliability-lab-demo.vercel.app)** — scores the bundled dataset in
-the browser and shows which case fails and why. The [HTML report](https://llm-reliability-lab-demo.vercel.app/report/sample) is the same one CI writes.
+**[Run the suite live →](https://llm-reliability-lab-wine.vercel.app)** — scores the bundled dataset in
+the browser and shows which case fails and why. The [HTML report](https://llm-reliability-lab-wine.vercel.app/report/sample) is the same one CI writes.
 
 Deterministic offline evaluation for grounded LLM applications. Measures citation validity, citation recall, expected-fact coverage, abstention behavior, latency SLOs, and estimated model cost before a prompt or retrieval change reaches production.
 
