@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LLM Reliability Lab</title>
+    <meta
+      name="description"
+      content="A deterministic evaluation harness for grounded LLM systems: citations, fact coverage, abstention, latency SLOs and estimated cost, enforced as a CI gate."
+    />
+    <meta property="og:title" content="Prompts ship without tests. This is the gate." />
+    <meta
+      property="og:description"
+      content="Citation precision and recall, fact coverage, abstention, latency SLOs and estimated cost, scored on a fixed dataset."
+    />
+    <meta property="og:type" content="website" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --surface-0: #000000;
+        --surface-1: #181818;
+        --surface-2: #1f1f1f;
+        --surface-3: #272727;
+        --line: #313131;
+        --ink: #ffffff;
+        --ink-muted: #9b9b9b;
+        --ease: cubic-bezier(0.32, 0.72, 0, 1);
+        --font: "Geist", system-ui, sans-serif;
+        --mono: "Geist Mono", ui-monospace, monospace;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        background: var(--surface-0);
+        color: var(--ink);
+        font-family: var(--font);
+        font-size: 16px;
+        line-height: 24px;
+      }
+
+      main { max-width: 760px; margin: 0 auto; padding: 80px 16px 96px; }
+
+      .eyebrow {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        font-family: var(--mono);
+        font-size: 12px;
+        line-height: 16px;
+        color: var(--ink-muted);
+      }
+
+      .pill { border: 1px solid var(--line); border-radius: 9999px; padding: 4px 12px; }
+
+      h1 {
+        margin: 24px 0 0;
+        max-width: 680px;
+        font-size: 48px;
+        line-height: 1.05;
+        font-weight: 600;
+        text-wrap: balance;
+        background-image: linear-gradient(to right, #ffffff, #9b9b9b);
+        background-clip: text;
+        -webkit-background-clip: text;
+        color: transparent;
+      }
+
+      .lede {
+        margin: 16px 0 0;
+        max-width: 680px;
+        font-size: 18px;
+        line-height: 28px;
+        color: var(--ink-muted);
+        text-wrap: pretty;
+      }
+
+      .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 32px; }
+
+      button, .btn {
+        font-family: var(--font);
+        font-size: 16px;
+        line-height: 24px;
+        font-weight: 600;
+        padding: 8px 12px;
+        border-radius: 12px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        transition:
+          background-color 700ms var(--ease),
+          border-color 700ms var(--ease),
+          transform 700ms var(--ease),
+          color 700ms var(--ease);
+      }
+
+      button.primary { border: 0; background: var(--ink); color: #000000; }
+      button.primary:hover { background: var(--ink-muted); }
+      button.primary:active { transform: scale(0.98); }
+      button.primary[disabled] { opacity: 0.6; cursor: default; }
+
+      .btn.secondary {
+        border: 1px solid var(--line);
+        background: var(--surface-2);
+        color: var(--ink);
+      }
+      .btn.secondary:hover { background: var(--surface-3); }
+
+      button:focus-visible, .btn:focus-visible, a:focus-visible {
+        outline: 2px solid var(--ink);
+        outline-offset: 2px;
+      }
+
+      section {
+        margin-top: 48px;
+        padding: 24px;
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: var(--surface-1);
+      }
+
+      h2 { margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; }
+
+      .hint {
+        margin: 8px 0 0;
+        font-size: 14px;
+        line-height: 20px;
+        color: var(--ink-muted);
+        text-wrap: pretty;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 24px;
+      }
+
+      @media (min-width: 640px) {
+        .metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      }
+
+      .metric {
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--surface-2);
+        text-align: center;
+      }
+
+      .metric dt { font-size: 12px; line-height: 16px; color: var(--ink-muted); }
+      .metric dd { margin: 4px 0 0; font-family: var(--mono); font-size: 24px; line-height: 32px; }
+
+      .case {
+        margin-top: 8px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--surface-2);
+      }
+
+      .case-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 16px;
+      }
+
+      .case-id { font-family: var(--mono); font-size: 14px; line-height: 20px; }
+      .verdict { font-family: var(--mono); font-size: 12px; line-height: 16px; }
+      .verdict.pass { color: #34d399; }
+      .verdict.fail { color: #fbbf24; }
+
+      .case-query { margin: 8px 0 0; font-size: 14px; line-height: 20px; color: var(--ink-muted); text-wrap: pretty; }
+      .case-failures { margin: 8px 0 0; padding-left: 16px; font-size: 14px; line-height: 20px; color: #fbbf24; }
+
+      .skeleton {
+        height: 20px;
+        margin-top: 8px;
+        border-radius: 8px;
+        background: var(--surface-3);
+        animation: pulse 1600ms var(--ease) infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.45; }
+      }
+
+      .error {
+        margin-top: 16px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        color: #fbbf24;
+        font-size: 14px;
+        line-height: 20px;
+      }
+
+      footer {
+        margin-top: 48px;
+        padding-top: 24px;
+        border-top: 1px solid var(--line);
+        font-size: 14px;
+        line-height: 20px;
+        color: var(--ink-muted);
+      }
+
+      footer a { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
+
+      @media (prefers-reduced-motion: reduce) {
+        * { transition: none !important; animation: none !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="eyebrow">
+        <span class="pill">Citations</span>
+        <span class="pill">Fact coverage</span>
+        <span class="pill">Abstention</span>
+        <span class="pill">Latency SLO</span>
+        <span class="pill">Cost</span>
+      </div>
+
+      <h1>You would not merge code without tests</h1>
+      <p class="lede">
+        Prompts get merged without them every week. This harness scores a fixed dataset on citation
+        precision and recall, fact coverage, correct abstention, latency against an SLO, and
+        estimated cost, then fails the build when the numbers drop. Same input, same score, every
+        run.
+      </p>
+
+      <div class="actions">
+        <button class="primary" id="run" type="button">Run the suite</button>
+        <a class="btn secondary" href="/report/sample">Open the HTML report</a>
+        <a class="btn secondary" href="https://github.com/huseyinkaplandev/llm-reliability-lab"
+          >Read the source</a
+        >
+      </div>
+
+      <section aria-labelledby="result-title">
+        <h2 id="result-title">Scored suite</h2>
+        <p class="hint">
+          The bundled dataset holds three cases: a grounded answer, a correct abstention, and one
+          response that cites a source it never retrieved while also breaching the latency SLO. The
+          third one is supposed to fail, and the score says exactly why.
+        </p>
+        <div id="result" aria-live="polite"></div>
+      </section>
+
+      <footer>
+        <a href="https://github.com/huseyinkaplandev/llm-reliability-lab">Source</a>
+        &middot;
+        <a href="https://huseyinkaplan.dev">Huseyin Kaplan</a>
+      </footer>
+    </main>
+
+    <script>
+      const runEl = document.querySelector("#run");
+      const resultEl = document.querySelector("#result");
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, (character) => {
+          return {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          }[character];
+        });
+      }
+
+      function percent(value) {
+        return Math.round(Number(value) * 100) + "%";
+      }
+
+      function renderLoading() {
+        resultEl.innerHTML =
+          '<div class="skeleton" style="width:60%"></div>' +
+          '<div class="skeleton"></div>' +
+          '<div class="skeleton" style="width:75%"></div>';
+      }
+
+      function renderReport(report, suite) {
+        const queries = new Map((suite.cases || []).map((item) => [item.id, item.query]));
+        const summary = report.summary;
+
+        const metrics =
+          '<dl class="metrics">' +
+          '<div class="metric"><dt>pass rate</dt><dd>' + percent(summary.pass_rate) + "</dd></div>" +
+          '<div class="metric"><dt>citation precision</dt><dd>' + percent(summary.citation_precision) + "</dd></div>" +
+          '<div class="metric"><dt>fact recall</dt><dd>' + percent(summary.fact_recall) + "</dd></div>" +
+          '<div class="metric"><dt>latency SLO</dt><dd>' + percent(summary.latency_slo_pass_rate) + "</dd></div>" +
+          "</dl>";
+
+        const cases = (report.cases || [])
+          .map((item) => {
+            const failures = (item.failures || [])
+              .map((failure) => "<li>" + escapeHtml(failure) + "</li>")
+              .join("");
+            return (
+              '<div class="case"><div class="case-head"><span class="case-id">' +
+              escapeHtml(item.id) +
+              '</span><span class="verdict ' +
+              (item.passed ? "pass" : "fail") +
+              '">' +
+              (item.passed ? "passed" : "failed") +
+              " &middot; score " +
+              Number(item.score).toFixed(2) +
+              "</span></div>" +
+              '<p class="case-query">' +
+              escapeHtml(queries.get(item.id) || "") +
+              "</p>" +
+              (failures ? '<ul class="case-failures">' + failures + "</ul>" : "") +
+              "</div>"
+            );
+          })
+          .join("");
+
+        resultEl.innerHTML = metrics + cases;
+      }
+
+      async function run() {
+        runEl.disabled = true;
+        renderLoading();
+
+        try {
+          const suiteResponse = await fetch("/sample");
+          if (!suiteResponse.ok) throw new Error("sample failed");
+          const suite = await suiteResponse.json();
+
+          const reportResponse = await fetch("/evaluate", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(suite),
+          });
+          if (!reportResponse.ok) throw new Error("evaluate failed");
+
+          renderReport(await reportResponse.json(), suite);
+        } catch (error) {
+          resultEl.innerHTML = '<p class="error">The suite did not run. Please try again.</p>';
+        } finally {
+          runEl.disabled = false;
+        }
+      }
+
+      runEl.addEventListener("click", run);
+      run();
+    </script>
+  </body>
+</html>
