@@ -62,3 +62,9 @@ class EvalReport(BaseModel):
     suite: str
     summary: EvalSummary
     cases: list[CaseResult]
+
+
+class SourceFile(BaseModel):
+    group: str
+    path: str
+    content: str

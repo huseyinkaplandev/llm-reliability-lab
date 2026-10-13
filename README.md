@@ -60,6 +60,7 @@ uvicorn llm_reliability_lab.api:app --reload
 - `GET /health`
 - `POST /evaluate` returns a typed JSON report.
 - `POST /evaluate/html` returns a standalone failure dashboard.
+- `GET /source` returns the dataset, evaluator, tests and CI workflow shown in the demo.
 - OpenAPI: `http://localhost:8000/docs`
 
 ## Dataset contract

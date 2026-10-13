@@ -4,7 +4,7 @@
     {
       "src": "api/index.py",
       "use": "@vercel/python",
-      "config": { "includeFiles": "{src/**,demo/**,sample_data/**}" }
+      "config": { "includeFiles": "{src/**,demo/**,sample_data/**,tests/**,.github/workflows/**,pyproject.toml,Dockerfile}" }
     }
   ],
   "routes": [{ "src": "/(.*)", "dest": "api/index.py" }]

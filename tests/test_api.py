@@ -29,3 +29,10 @@ def test_evaluate_endpoint() -> None:
     )
     assert response.status_code == 200
     assert response.json()["summary"]["pass_rate"] == 1
+
+
+def test_source_lists_the_dataset_and_the_evaluator() -> None:
+    files = {item["path"]: item for item in client.get("/source").json()}
+    assert "hallucinated-citation" in files["sample_data/eval_cases.jsonl"]["content"]
+    assert "def citation_scores" in files["src/llm_reliability_lab/metrics.py"]["content"]
+    assert files[".github/workflows/ci.yml"]["group"] == "CI gate"
